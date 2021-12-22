@@ -1,7 +1,6 @@
 const fs = require('fs');
 const { Client, Collection, Intents, ClientUser } = require('discord.js');
 const { token } = require('./config.json');
-const { MessageActionRow, MessageButton } = require('discord.js');
 
 const client = new Client({ intents: [Intents.FLAGS.GUILDS] });
 
@@ -13,14 +12,19 @@ for (const file of commandFiles) {
 	client.commands.set(command.data.name, command);
 }
 
-client.once('ready', () => {
-	console.log(`Bot Ready!`);
-});
+const eventFiles = fs.readdirSync('./events').filter(file => file.endsWith('.js'));
+
+for (const file of eventFiles) {
+	const event = require(`./events/${file}`);
+	if (event.once) {
+		client.once(event.name, (...args) => event.execute(...args));
+	} else {
+		client.on(event.name, (...args) => event.execute(...args));
+	}
+}
 
 client.on('interactionCreate', async interaction => {
-    console.log(`"${interaction.user.tag}"님이 "#${interaction.channel.name}" 채널에서 명령어를 실행했어요`);
-
-	if (!interaction.isCommand()) return;
+    if (!interaction.isCommand()) return;
     
     const command = client.commands.get(interaction.commandName);
         
@@ -32,8 +36,7 @@ client.on('interactionCreate', async interaction => {
         console.error(error);
         return interaction.reply({ content: '명령어 실행중 오류가 발생했어요! code: -1', ephemeral: true });
     }
-        
+
 });
-        
 
 client.login(token);
